@@ -1,3 +1,22 @@
+"""Base Cython implementation.
+
+``.string``:
+* try/except for int/iterable
+``.index``:
+* isinstance for str/iterable, try/except KeyError for unk.
+:func:`permit_unk()`:
+* Switches an internal list of ints of specials.
+:func:`sentence()`:
+* switch(ndim)
+  - 1: sets integers in or past a specials_as_integers to 0,
+       takes np sum
+  - else: same logic with axis arg for "or past a" and sum.
+:func:`strip()`:
+* Uses bisect
+:func:`__len__()`:
+* Calculated from counts ``Counter``.
+
+"""
 import numpy as np
 import bisect
 cimport numpy as np

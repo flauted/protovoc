@@ -3,3 +3,5 @@ __pycache__/
 *.c
 build/
 .idea/
+.ipynb_checkpoints/
+*~

@@ -1,3 +1,27 @@
+"""Base Cython implementation.
+
+``.string``:
+* try/except for int/iterable
+* cdefed
+``.index``:
+* isinstance for str/iterable, try/except KeyError for unk.
+* cdefed
+:func:`permit_unk()`:
+* Switches an internal list of ints of specials.
+:func:`sentence()`:
+* switch(ndim)
+  - 1: sets integers in or past a specials_as_integers to 0,
+        - Uses custom masking function relying on only specials
+          being below some max
+       takes np sum
+  - else: Relies on np.ravel and a step in the custom function.
+:func:`strip()`:
+* Uses bisect
+* re-caches len(cts) and nummber of specials
+:func:`__len__()`:
+* Calculated from counts ``Counter``.
+
+"""
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -94,12 +118,9 @@ cdef np.ndarray[BOOL_t, ndim=1, cast=True] _isin_cumsum_ge0_stepped(
 cdef le_or_after(arr, thresh, axis):
     stepsize = arr.shape[axis]
     if axis != arr.ndim - 1:
-        # tp_axes = np.arange(arr.ndim)
-        # tp_axes[axis], tp_axes[-1] = tp_axes[-1], tp_axes[axis]
-        # arr = np.transpose(arr, axes=tp_axes)
         arr = np.swapaxes(arr, -1, axis)
         return _isin_cumsum_ge0_stepped(np.ravel(arr), thresh, stepsize).reshape(
-            arr.shape).swapaxes(-1, axis) # .transpose(np.argsort(tp_axes))
+            arr.shape).swapaxes(-1, axis)
     else:
         return _isin_cumsum_ge0_stepped(np.ravel(arr), thresh, stepsize).reshape(
             arr.shape)

@@ -1,3 +1,22 @@
+"""Base Cython implementation.
+
+``.string``:
+* See cython_1
+``.index``:
+* See cython_1
+:func:`permit_unk()`:
+* Switches an internal list of ints of specials.
+:func:`sentence()`:
+* switch(ndim)
+  - 1: See cython_1
+  - else: Relies on np.ravel and logical or-equals (one loop).
+:func:`strip()`:
+* Uses np.searchsorted (np equiv of bisect)
+* re-caches len(cts) and nummber of specials
+:func:`__len__()`:
+* Calculated from counts ``Counter``.
+
+"""
 import numpy as np
 cimport numpy as np
 cimport cython
@@ -20,29 +39,6 @@ cdef class _CyStrInterface:
 
     def __contains__(self, str_):
         return str_ in self.i2s
-
-
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing.
-cdef np.ndarray[BOOL_t, ndim=1, cast=True] _isin_cumsum_ge0(np.ndarray[LONG_t, ndim=1] elements, set test_elements):
-    cdef int n_elems = len(elements)
-    cdef int elem_idx
-    for elem_idx in range(0, n_elems):
-        if elements[elem_idx] in test_elements:
-            return np.concatenate((np.zeros(elem_idx, dtype=bool), np.ones(n_elems - elem_idx, dtype=bool)))
-
-    return np.zeros(n_elems, dtype=bool)
-
-
-@cython.boundscheck(False)  # Deactivate bounds checking
-@cython.wraparound(False)   # Deactivate negative indexing.
-cdef np.ndarray _isin_cumsum_ge0_general(np.ndarray elements, np.ndarray test_elements, int axis):
-    cdef np.ndarray [LONG_t, ndim=1] elements_1 = elements.ravel()
-    mask = np.zeros(len(elements_1), dtype=bool)
-    cdef int test_idx
-    for test_idx in range(0, len(test_elements)):
-        mask |= (elements_1 == test_elements[test_idx])
-    return mask.reshape([elements.shape[i] for i in range(elements.ndim)]).cumsum(axis=axis) != 0
 
 
 cdef class _CyIntInterface:
@@ -76,13 +72,33 @@ cdef class _CyIntInterface:
 
 @cython.boundscheck(False)  # Deactivate bounds checking
 @cython.wraparound(False)   # Deactivate negative indexing.
+cdef np.ndarray[BOOL_t, ndim=1, cast=True] _isin_cumsum_ge0(np.ndarray[LONG_t, ndim=1] elements, set test_elements):
+    cdef int n_elems = len(elements)
+    cdef int elem_idx
+    for elem_idx in range(0, n_elems):
+        if elements[elem_idx] in test_elements:
+            return np.concatenate((np.zeros(elem_idx, dtype=bool), np.ones(n_elems - elem_idx, dtype=bool)))
+
+    return np.zeros(n_elems, dtype=bool)
+
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing.
+cdef np.ndarray _isin_cumsum_ge0_general(np.ndarray elements, np.ndarray test_elements, int axis):
+    cdef np.ndarray [LONG_t, ndim=1] elements_1 = elements.ravel()
+    mask = np.zeros(len(elements_1), dtype=bool)
+    cdef int test_idx
+    for test_idx in range(0, len(test_elements)):
+        mask |= (elements_1 == test_elements[test_idx])
+    return mask.reshape([elements.shape[i] for i in range(elements.ndim)]).cumsum(axis=axis) != 0
+
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing.
 cdef str _sentence_1d(
         np.ndarray[LONG_t, ndim=1] integers,
-        # np.ndarray[LONG_t, ndim=1] specs_as_int,
         set specs_as_int,
         np.ndarray[object, ndim=1] strings):
-    # cdef np.ndarray sucks = _isin(integers, specs_as_int).cumsum() != 0
-    # cdef np.ndarray sucks = _isin_cumsum_ge0(integers, specs_as_int)
     cdef np.ndarray[object, ndim=1] strs = strings[integers]
     strs[1:] = " " + strs[1:]
     strs[_isin_cumsum_ge0(integers, specs_as_int)] = ""
@@ -96,11 +112,7 @@ cdef np.ndarray _sentence(
         np.ndarray integers,
         int axis,
         np.ndarray[LONG_t, ndim=1] specs_as_int,
-        # set specs_as_int,
         np.ndarray[object, ndim=1] strings):
-#     cdef np.ndarray sucks = np.isin(integers, specs_as_int).cumsum(axis=axis) != 0
-#     cdef np.ndarray sucks =
-#     cdef np.ndarray sucks = _isin_cumsum_ge0_general(integers, specs_as_int, axis=axis)
     cdef np.ndarray strs = strings[integers]
     cdef list idx_l = []
     cdef Py_ssize_t shape
@@ -161,11 +173,9 @@ cdef class Numericalization:
 
     def sentence(self, integers, axis=0):
         if integers.ndim == 1:
-            # return _sentence_1d(integers, self._chosen_specs_as_int, self.i2s)
             return _sentence_1d(integers, self._chosen_specs_as_int_set, self.i2s)
         else:
             return _sentence(integers, axis, self._chosen_specs_as_int, self.i2s)
-            # return _sentence(integers, axis, self._chosen_specs_as_int_set, self.i2s)
 
     def __len__(self):
         return self._len_cts

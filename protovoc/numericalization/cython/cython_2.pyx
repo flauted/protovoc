@@ -1,3 +1,22 @@
+"""Base Cython implementation.
+
+``.string``:
+* See cython_1
+``.index``:
+* See cython_1
+:func:`permit_unk()`:
+* Switches an internal list of ints of specials.
+:func:`sentence()`:
+* switch(ndim)
+  - 1: See cython_1
+  - else: See cython_0
+:func:`strip()`:
+* Uses np.searchsorted (np equiv of bisect)
+* re-caches len(cts) and nummber of specials
+:func:`__len__()`:
+* Calculated from counts ``Counter``.
+
+"""
 import numpy as np
 cimport numpy as np
 cimport cython
